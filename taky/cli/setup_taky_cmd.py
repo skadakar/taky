@@ -54,7 +54,11 @@ def setup_taky(args):
         args.path = os.path.abspath(args.path)
         print(f"Installing site to {args.path}")
 
-        dirs = [args.path, os.path.join(args.path, "ssl")]
+        dirs = [
+            args.path,
+            os.path.join(args.path, "ssl"),
+            os.path.join(args.path, "data"),
+        ]
         for dir_name in dirs:
             if not os.path.exists(dir_name):
                 os.mkdir(dir_name)
@@ -65,6 +69,8 @@ def setup_taky(args):
 
         ssl_path = "ssl"
         config_path = "taky.conf"
+
+        config.set("taky", "root_dir", "./data")
 
         config.set("ssl", "ca", os.path.join(".", "ssl", "ca.crt"))
         config.set("ssl", "ca_key", os.path.join(".", "ssl", "ca.key"))
