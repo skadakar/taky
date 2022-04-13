@@ -56,9 +56,11 @@ def setup_taky(args):
 
         dirs = [
             args.path,
-            os.path.join(args.path, "ssl"),
             os.path.join(args.path, "data"),
         ]
+        if args.use_ssl:
+            dirs.append(os.path.join(args.path, "ssl"))
+
         for dir_name in dirs:
             if not os.path.exists(dir_name):
                 os.mkdir(dir_name)
@@ -85,9 +87,10 @@ def setup_taky(args):
 
         dirs = [
             os.path.join(args.path, "etc", "taky"),
-            os.path.join(args.path, "etc", "taky", "ssl"),
             os.path.join(args.path, "var", "taky"),
         ]
+        if args.use_ssl:
+            dirs.append(os.path.join(args.path, "etc", "taky", "ssl"))
 
         for dir_name in dirs:
             if not os.path.exists(dir_name):
