@@ -1,16 +1,26 @@
 import os
+import sys
 import shutil
 import tempfile
 import uuid
 import zipfile
+import configparser
 
 from taky.util import datapackage, rotc
+from taky.config import load_config
 from taky.config import app_config as config
 
 
 def build_client_reg(subp):
     bld_cl = subp.add_parser("build_client", help="Build client file")
     bld_cl.add_argument("name", help="Name for client")
+    bld_cl.add_argument(
+        "--is_itak",
+        dest="is_itak",
+        default=False,
+        action="store_true",
+        help="Generate for iTAK instead of ATAK",
+    )
     bld_cl.add_argument(
         "--p12_pw",
         dest="p12_pw",
@@ -27,13 +37,20 @@ def build_client_reg(subp):
 
 
 def build_client(args):
+    try:
+        load_config(args.cfg_file)
+    except (OSError, configparser.ParsingError) as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
+
     tdir = tempfile.mkdtemp(prefix="taky-cert-")
 
     # Build zip file structure
-    mdir = os.path.join(tdir, "MANIFEST")
-    os.mkdir(mdir)
-    cdir = os.path.join(tdir, "certs")
-    os.mkdir(cdir)
+    if args.is_itak:
+        cdir = tdir
+    else:
+        cdir = os.path.join(tdir, "certs")
+        os.mkdir(cdir)
 
     # Copy over server p12 file
     server_p12 = config.get("ssl", "server_p12")
@@ -65,35 +82,61 @@ def build_client(args):
     port = config.getint("cot_server", "port")
     method = "ssl" if config.getboolean("ssl", "enabled") else "tcp"
 
-    prefs = {
-        "cot_streams": {
-            "count": 1,
-            "description0": server_addr,
-            "enabled0": False,
-            "connectString0": f"{public_ip}:{port}:{method}",
-        },
-        "com.atakmap.app_preferences": {
-            "displayServerConnectionWidget": True,
-            "caLocation": f"/storage/emulated/0/atak/cert/{server_p12_pkg_name}",
-            "caPassword": config.get("ssl", "server_p12_pw"),
-            "clientPassword": args.p12_pw,
-            "certificateLocation": f"/storage/emulated/0/atak/cert/{client_pkg_name}.p12",
-        },
-    }
+    pref_name = "preference.pref"
+    if args.is_itak:
+        prefs = {
+            "cot_streams": {
+                "count": 1,
+                "description0": server_addr,
+                "enabled0": False,
+                "connectString0": f"{public_ip}:{port}:{method}",
+            },
+            "com.atakmap.app_preferences": {
+                "displayServerConnectionWidget": True,
+                "caLocation": f"cert/{os.path.basename(server_p12_pkg_name)}",
+                "caPassword": config.get("ssl", "server_p12_pw"),
+                "clientPassword": args.p12_pw,
+                "certificateLocation": f"cert/{client_pkg_name}.p12",
+            },
+        }
+    else:
+        prefs = {
+            "cot_streams": {
+                "count": 1,
+                "description0": server_addr,
+                "enabled0": False,
+                "connectString0": f"{public_ip}:{port}:{method}",
+            },
+            "com.atakmap.app_preferences": {
+                "displayServerConnectionWidget": True,
+                "caLocation": f"/storage/emulated/0/atak/cert/{server_p12_pkg_name}",
+                "caPassword": config.get("ssl", "server_p12_pw"),
+                "clientPassword": args.p12_pw,
+                "certificateLocation": f"/storage/emulated/0/atak/cert/{client_pkg_name}.p12",
+            },
+        }
 
-    with open(os.path.join(cdir, "preference.pref"), "wb") as pref_fp:
+    with open(os.path.join(cdir, pref_name), "wb") as pref_fp:
         datapackage.build_pref(pref_fp, prefs)
 
     # Build Mission Package Manifest
-    cfg_params = {
-        "uid": str(uuid.uuid4()),
-        "name": f"{server_addr}_DP",
-        "onReceiveDelete": "true",
-    }
-    man_cts = ["preference.pref", server_p12_pkg_name, f"{client_pkg_name}.p12"]
+    if not args.is_itak:
+        mdir = os.path.join(tdir, "MANIFEST")
+        os.mkdir(mdir)
 
-    with open(os.path.join(mdir, "manifest.xml"), "wb") as man_fp:
-        datapackage.build_manifest(man_fp, cfg_params, man_cts)
+        cfg_params = {
+            "uid": str(uuid.uuid4()),
+            "name": f"{server_addr}_DP",
+            "onReceiveDelete": "true",
+        }
+        man_cts = [
+            pref_name,
+            os.path.basename(server_p12_pkg_name),
+            f"{client_pkg_name}.p12",
+        ]
+
+        with open(os.path.join(mdir, "manifest.xml"), "wb") as man_fp:
+            datapackage.build_manifest(man_fp, cfg_params, man_cts)
 
     cwd = os.getcwd()
 

@@ -39,6 +39,15 @@ def setup_taky_reg(subp):
         action="store_false",
         help="Disable SSL for the server",
     )
+    setup.add_argument(
+        "--host",
+        dest="hostname",
+        default=default_hostname,
+        help="Server hostname [%(default)s]",
+    )
+    setup.add_argument(
+        "--bind-ip", dest="ip", default="0.0.0.0", help="Bind Address [%(default)s]"
+    )
     setup.add_argument("path", nargs="?", help="Optional path for taky install")
 
 

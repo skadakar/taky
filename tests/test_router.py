@@ -10,16 +10,7 @@ from taky import cot
 from taky.config import load_config, app_config
 from taky.cot import models
 from taky.config import load_config
-from .test_cot_event import XML_S
-
-
-class UnittestTAKClient(cot.TAKClient):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.queue = queue.Queue()
-
-    def send_event(self, msg):
-        self.queue.put(msg)
+from . import XML_S, UnittestTAKClient
 
 
 class RouterTestcase(ut.TestCase):
@@ -28,8 +19,12 @@ class RouterTestcase(ut.TestCase):
         app_config.set("taky", "redis", "false")
         app_config.set("cot_server", "log_cot", None)
         self.router = cot.COTRouter()
-        self.tk1 = UnittestTAKClient(cbs={"route": self.router.route})
-        self.tk2 = UnittestTAKClient(cbs={"route": self.router.route})
+        self.tk1 = UnittestTAKClient(
+            cbs={"route": self.router.route, "connect": self.router.send_persist}
+        )
+        self.tk2 = UnittestTAKClient(
+            cbs={"route": self.router.route, "connect": self.router.send_persist}
+        )
 
         elm = etree.fromstring(XML_S)
         now = dt.utcnow()
@@ -51,7 +46,9 @@ class RouterTestcase(ut.TestCase):
         """
         # Both clients connect simultaneously
         self.router.client_connect(self.tk1)
+        self.router.send_persist(self.tk1)
         self.router.client_connect(self.tk2)
+        self.router.send_persist(self.tk2)
 
         # tk1 identifies self, tk2 should get message
         self.tk1.feed(self.tk1_ident_msg)
@@ -68,10 +65,12 @@ class RouterTestcase(ut.TestCase):
     def test_persist_announce(self):
         # TK1 connects, and identifies
         self.router.client_connect(self.tk1)
+        self.router.send_persist(self.tk1)
         self.tk1.feed(self.tk1_ident_msg)
 
         # TK2 connects -- and should have info about TK1 from persist
         self.router.client_connect(self.tk2)
+        self.router.send_persist(self.tk2)
         ret = self.tk2.queue.get_nowait()
         self.assertTrue(ret.uid == "ANDROID-deadbeef")
 

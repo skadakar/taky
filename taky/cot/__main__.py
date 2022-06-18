@@ -102,8 +102,7 @@ def main():
         else:
             argp.error("Unable to load './taky.conf' or '/etc/taky.conf'")
     except configparser.ParsingError as exc:
-        argp.error(f"{exc}")
-        sys.exit(1)
+        argp.error(f"Configuration file error: {str(exc)}")
 
     # TODO: Check for ipv6 support
     gst = SigHdlr(args.debug)

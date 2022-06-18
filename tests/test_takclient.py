@@ -4,7 +4,7 @@ import unittest as ut
 from taky import cot
 from taky.config import load_config, app_config
 
-from .test_cot_event import XML_S
+from . import XML_S
 
 
 class TAKClientTest(ut.TestCase):

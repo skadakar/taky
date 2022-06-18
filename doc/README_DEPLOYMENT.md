@@ -115,8 +115,9 @@ This step will also generate the certificate authority, and server certificate.
 `bin/activate` file!)
 
 ```
-admin@bluetack:~$ sudo taky --user stickytak \
-                            --server-address 192.168.1.100
+admin@bluetack:~$ sudo takyctl setup --user stickytak \
+                                     --public-ip 192.168.1.100 \
+                                     --host bluetack
 
 admin@bluetack:~$ ls -l /etc/taky
 /etc/taky:
