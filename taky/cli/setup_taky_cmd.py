@@ -28,9 +28,6 @@ def setup_taky_reg(subp):
         help="Server address [%(default)s]",
     )
     setup.add_argument(
-        "--bind-ip", dest="ip", default="0.0.0.0", help="Bind Address [%(default)s]"
-    )
-    setup.add_argument(
         "--user", dest="user", default=None, help="User/group for file permissions"
     )
     setup.add_argument(
