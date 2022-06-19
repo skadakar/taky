@@ -1,9 +1,11 @@
 import sys
 import argparse
 import traceback
+import configparser
 
 from taky import __version__
 from taky import cli
+from taky.config import load_config
 
 
 def arg_parse():
@@ -46,6 +48,13 @@ def main():
     if not args.command:
         argp.print_usage()
         sys.exit(1)
+
+    if args.command != "setup":
+        try:
+            load_config(args.cfg_file, explicit=True)
+        except (OSError, configparser.ParsingError) as exc:
+            print(exc, file=sys.stderr)
+            sys.exit(1)
 
     try:
         ret = commands[args.command](args)

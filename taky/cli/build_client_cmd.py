@@ -7,7 +7,6 @@ import zipfile
 import configparser
 
 from taky.util import datapackage, rotc
-from taky.config import load_config
 from taky.config import app_config as config
 
 
@@ -37,12 +36,6 @@ def build_client_reg(subp):
 
 
 def build_client(args):
-    try:
-        load_config(args.cfg_file)
-    except (OSError, configparser.ParsingError) as exc:
-        print(exc, file=sys.stderr)
-        sys.exit(1)
-
     tdir = tempfile.mkdtemp(prefix="taky-cert-")
 
     # Build zip file structure
