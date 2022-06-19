@@ -78,6 +78,17 @@ def load_config(path=None, explicit=False):
 
 
 def patch_config(ret_config):
+    cfg_path = ret_config.get("taky", "cfg_path")
+    cfg_dir = "."
+    if cfg_path:
+        cfg_dir = os.path.realpath(os.path.dirname(cfg_path))
+
+    for (section, key) in [("taky", "root_dir"), ("dp_server", "upload_path")]:
+        f_path = ret_config.get(section, key)
+        if f_path and not os.path.isabs(f_path):
+            f_path = os.path.realpath(os.path.join(cfg_dir, f_path))
+            ret_config.set(section, key, f_path)
+
     # TODO: Deprecate
     if ret_config.has_option("taky", "hostname") or ret_config.has_option(
         "taky", "public_ip"
@@ -119,10 +130,7 @@ def patch_config(ret_config):
             raise ValueError(f"Invalid max_persist_ttl: {max_ttl}")
     ret_config.set("cot_server", "max_persist_ttl", str(max_ttl))
 
-    if not ret_config.getboolean("ssl", "enabled"):
-        # Disable monitor port
-        ret_config.set("cot_server", "mon_ip", None)
-    else:
+    if ret_config.getboolean("ssl", "enabled"):
         port = ret_config.get("cot_server", "mon_port")
         if port in [None, ""]:
             port = 8087 if ret_config.getboolean("ssl", "enabled") else None
@@ -135,6 +143,17 @@ def patch_config(ret_config):
             if port <= 0 or port >= 65535:
                 raise ValueError(f"Invalid port: {port}")
         ret_config.set("cot_server", "mon_port", str(port))
+
+        ca_path = ret_config.get("ssl", "ca")
+
+        for f_name in ["ca", "ca_key", "server_p12", "cert", "key"]:
+            f_path = ret_config.get("ssl", f_name)
+            if f_path and not os.path.isabs(f_path):
+                f_path = os.path.realpath(os.path.join(cfg_dir, f_path))
+                ret_config.set("ssl", f_name, f_path)
+    else:
+        # Disable monitor port
+        ret_config.set("cot_server", "mon_ip", None)
 
     app_config.clear()
     app_config.update(ret_config)
