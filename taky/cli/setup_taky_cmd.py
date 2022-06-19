@@ -5,7 +5,7 @@ import socket
 
 from taky.config import DEFAULT_CFG
 from taky.config import app_config as config
-import taky.util.rotc as rotc
+from taky.util import rotc
 
 
 def setup_taky_reg(subp):
